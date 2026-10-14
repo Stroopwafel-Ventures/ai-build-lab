@@ -110,6 +110,21 @@ npm run validate:fixtures        # counts, foreign keys, golden scenarios, priva
 
 ## Deploy
 
+### No-laptop setup (Vercel only)
+
+You don't need to run anything locally:
+
+1. Run the schema in Supabase's SQL editor and configure Auth (steps 1–6 of [Setup](#setup)).
+2. In Vercel, add the env vars, plus **`PARTICIPANTS_JSON`**: the contents of `seed/participants.local.json`
+   as one line of JSON. It lives only in Vercel, never in git.
+3. Deploy, then sign in with an admin email from that list. The login form creates the account on the fly
+   for any email on `PARTICIPANTS_JSON` (and only those).
+4. Go to **/admin → Re-seed data**. It adds everyone on the list, then loads all the fixtures.
+
+To add someone later, use `/admin/people`, or add them to `PARTICIPANTS_JSON` and redeploy.
+
+### Steps
+
 1. Push this repo to GitHub (public).
 2. In Vercel: *Add New → Project →* import the repo. Framework preset: Next.js.
 3. Add the env vars from `.env.example` for **Production** and **Preview**.
@@ -117,7 +132,7 @@ npm run validate:fixtures        # counts, foreign keys, golden scenarios, priva
 5. Add the production URL to Supabase's Site URL and redirect URLs (above).
 
 Seeding runs from your laptop against the production Supabase (`npm run seed` with production keys in `.env.local`),
-or from the app at **/admin → Re-seed data** (data only; it doesn't touch participants).
+or from the app at **/admin → Re-seed data** (participants from `PARTICIPANTS_JSON`, then all fixtures).
 
 ## Adding people
 

@@ -15,6 +15,8 @@ import type {
   CompanyFixture, ContactFixture, DealTeamFixture, EmploymentFixture, JobFixture,
   MeetingNoteFixture, TeamFixture, UserContactFixture,
 } from "@/lib/fixtures";
+import { addParticipant } from "@/lib/participants";
+import { emailsOf, type ParticipantEntry } from "@/lib/participantList";
 import companies from "@/seed/data/companies.json";
 import team from "@/seed/data/team.json";
 import dealTeam from "@/seed/data/company_deal_team.json";
@@ -162,4 +164,20 @@ export async function giveStarterNetwork(db: SupabaseClient, userId: string, siz
     if (error) throw error;
   }
   return rows.length;
+}
+
+// ---------------------------------------------------------------------------
+// Participants: upsert a list (from the local file or PARTICIPANTS_JSON).
+// Idempotent; never deletes anyone.
+// ---------------------------------------------------------------------------
+export async function upsertParticipants(db: SupabaseClient, list: ParticipantEntry[], log: (msg: string) => void = () => {}) {
+  let linked = 0;
+  for (const p of list) {
+    const emails = emailsOf(p);
+    if (!emails.length) log(`⚠ ${p.key} has no usable email yet; they can't sign in until one is added`);
+    const r = await addParticipant(db, { key: p.key, full_name: p.full_name, title: p.title, role: p.role, emails, source: "seed" });
+    r.warnings.forEach((w) => log(`⚠ ${p.key}: ${w}`));
+    linked += r.emailsAdded.length;
+  }
+  return { people: list.length, newLogins: linked };
 }

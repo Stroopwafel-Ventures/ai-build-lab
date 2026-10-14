@@ -7,9 +7,8 @@
  */
 import "./_env";
 import { createServiceClient } from "@/lib/supabase/service";
-import { addParticipant } from "@/lib/participants";
-import { loadFixtures } from "@/lib/seed";
-import { emailsOf, participantFile, readParticipants } from "./_participants";
+import { loadFixtures, upsertParticipants } from "@/lib/seed";
+import { participantFile, readParticipants } from "./_participants";
 
 async function main() {
   const db = createServiceClient();
@@ -17,15 +16,8 @@ async function main() {
   const people = readParticipants(file);
   console.log(`👥 Upserting ${people.length} participants from ${file}`);
 
-  for (const p of people) {
-    const emails = emailsOf(p);
-    if (!emails.length) console.warn(`   ⚠ ${p.key} has no usable email yet; they can't sign in until one is added`);
-    const r = await addParticipant(db, {
-      key: p.key, full_name: p.full_name, title: p.title, role: p.role, emails, source: "seed",
-    });
-    r.warnings.forEach((w) => console.warn(`   ⚠ ${p.key}: ${w}`));
-    if (r.emailsAdded.length) console.log(`   ✓ ${p.key}: linked ${r.emailsAdded.length} new login(s)`);
-  }
+  const r = await upsertParticipants(db, people, (m) => console.warn(`   ${m}`));
+  console.log(`   ✓ ${r.people} people, ${r.newLogins} new login(s)`);
 
   console.log("🧇 Loading fixtures");
   const report = await loadFixtures(db, (m) => console.log(`   ${m}`));

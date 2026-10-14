@@ -13,6 +13,7 @@ const INTEGRATIONS = [
   ["HARMONIC_API_KEY", "Harmonic"],
   ["VOYAGE_API_KEY", "Voyage embeddings"],
   ["SUPABASE_SERVICE_ROLE_KEY", "Supabase service role"],
+  ["PARTICIPANTS_JSON", "Participant list (env)"],
 ] as const;
 
 export default async function AdminPage() {
@@ -24,7 +25,8 @@ export default async function AdminPage() {
         <Card title="Reset the data">
           <p className="mb-4 text-sm text-muted">
             Wipes companies, contacts, jobs, relationships and notes, then reloads the committed fixtures.
-            People and logins are never deleted. Same as <code>npm run seed</code>, minus the participant upsert.
+            People and logins are never deleted. If <code>PARTICIPANTS_JSON</code> is set, everyone on it is
+            added or updated first, so this does the same as <code>npm run seed</code>.
           </p>
           <ReseedButton />
         </Card>

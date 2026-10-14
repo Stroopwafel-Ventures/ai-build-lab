@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { prepareLogin } from "./actions";
 
 /**
  * Invite-only passwordless login:
@@ -21,6 +22,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
     e.preventDefault();
     setBusy(true);
     setError("");
+    await prepareLogin(email); // creates the account if this email is on the participant list
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
