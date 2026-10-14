@@ -1,0 +1,19 @@
+[
+  { "key": "p01", "full_name": "Noor van Gelderen", "title": "Head of Systems & Syrup (Admin)", "role": "admin", "email": "noor@example.com" },
+  { "key": "p02", "full_name": "Joost Ellerman", "title": "Community Lead, Canal Club", "role": "community", "email": "joost@example.com" },
+  { "key": "p03", "full_name": "Ilse Verbrugge", "title": "Community & Events Manager", "role": "community", "email": "ilse@example.com" },
+  { "key": "p04", "full_name": "Ravi Lindeboom", "title": "Talent Partner (Chief Matchmaker)", "role": "talent", "email": "ravi@example.com" },
+  { "key": "p05", "full_name": "Marit Oudshoorn", "title": "Platform Lead", "role": "platform", "email": "marit@example.com" },
+  { "key": "p06", "full_name": "Theo Brandenhorst", "title": "Platform Manager, Founder Support", "role": "platform", "email": "theo@example.com" },
+  { "key": "p07", "full_name": "Saskia Groeneveld", "title": "Senior Talent Partner", "role": "talent", "email": "saskia@example.com" },
+  { "key": "p08", "full_name": "Daniël Kooistra", "title": "Head of Corporate Partnerships", "role": "partnerships", "email": "daniel@example.com" },
+  { "key": "p09", "full_name": "Yasmina Achour", "title": "Platform Associate", "role": "platform", "email": "yasmina@example.com" },
+  { "key": "p10", "full_name": "Pepijn Stroomberg", "title": "Portfolio Success Manager", "role": "platform", "email": "pepijn@example.com" },
+  { "key": "p11", "full_name": "Lotte Hazenberg", "title": "Talent Associate", "role": "talent", "emails": ["lotte@example.com", "l.hazenberg@example.com"] },
+  { "key": "p12", "full_name": "Mees Dorrestein", "title": "Platform Manager, Go-to-Market", "role": "platform", "email": "mees@example.com" },
+  { "key": "p13", "full_name": "Fenna Altena", "title": "Platform Manager, Data & Tools", "role": "platform", "email": "fenna@example.com" },
+  { "key": "p14", "full_name": "Hugo Vermeersch", "title": "Partnerships Manager", "role": "partnerships", "email": "hugo@example.com" },
+  { "key": "p15", "full_name": "Esther Kalverda", "title": "Head of Fund Operations", "role": "operations", "email": "esther@example.com" },
+  { "key": "p16", "full_name": "Kasper Vinkenoog", "title": "Ecosystem Partnerships Lead (Waffle Diplomat)", "role": "partnerships", "email": "kasper@example.com" },
+  { "key": "p17", "full_name": "Rosa Kuiperij", "title": "Operations & Finance Associate", "role": "operations", "email": "rosa@example.com" }
+]
