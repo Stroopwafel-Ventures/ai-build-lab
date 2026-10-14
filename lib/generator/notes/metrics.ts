@@ -59,7 +59,8 @@ export function metricsAt(company: CompanyFixture, meta: CompanyMeta, dateIso: s
   const factor = Math.pow(1 + g / 100, -monthsBefore / 3);
   const arr = Math.max(15_000, arrNow * factor);
   const headcount = Math.max(3, Math.round(hcNow * Math.pow(factor, 0.55)));
-  const burn = Math.round((headcount * r.int(8_200, 10_500)) / 1000) * 1000;
+  // Net burn = people costs (~€8–10k per head per month, fully loaded) minus gross profit.
+  const burn = Math.max(40_000, Math.round((headcount * r.int(8_200, 10_500) - (arr / 12) * (gm / 100)) / 1000) * 1000);
   const rj = r.fork(dateIso); // per-note noise; the trajectory above stays fixed
   const jitter = (n: number, spread: number) => n * (1 + (rj.float() - 0.5) * spread);
   const customers = Math.max(2, Math.round(arr / acv));
