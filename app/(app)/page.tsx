@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Badge, Card, EmptyState, Stat, Strength, fmtDate, humanize } from "@/components/ui";
 import { STRENGTH_LABELS } from "@/lib/types";
+import { REPO_URL } from "@/lib/constants";
+import { GitHubIcon } from "@/components/GitHubIcon";
 
 /** Goedemorgen / Goedemiddag / Goedenavond, on Amsterdam time. */
 function greeting() {
@@ -36,9 +38,21 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold sm:text-4xl">{greeting()}{firstName && `, ${firstName}`} 🧇</h1>
-        <p className="mt-1 text-muted">Here&apos;s the Stroopwafel Ventures network at a glance.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-semibold sm:text-4xl">{greeting()}{firstName && `, ${firstName}`} 🧇</h1>
+          <p className="mt-1 text-muted">Here&apos;s the Stroopwafel Ventures network at a glance.</p>
+        </div>
+        <a
+          href={REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-medium shadow-sm transition hover:border-waffle"
+        >
+          <GitHubIcon className="h-4 w-4" />
+          Code on GitHub
+          <span aria-hidden className="text-muted">↗</span>
+        </a>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

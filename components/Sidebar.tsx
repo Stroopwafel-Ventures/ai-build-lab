@@ -3,6 +3,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Logo } from "@/components/brand";
+import { GitHubIcon } from "@/components/GitHubIcon";
+import { REPO_URL } from "@/lib/constants";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: "🏠" },
@@ -59,7 +61,17 @@ export function Sidebar({ name, email, isAdmin }: { name: string; email: string;
             <nav className="flex flex-col gap-1">{ADMIN_NAV.map((i) => link(i, i.href === "/admin" ? exact(i.href) : active(i.href)))}</nav>
           </>
         )}
-        <div className="mt-8 border-t border-line pt-4 text-xs text-muted">
+        <a
+          href={REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-ink/80 transition hover:bg-surface/60"
+        >
+          <GitHubIcon className="h-4 w-4" />
+          Code on GitHub
+          <span aria-hidden className="text-muted">↗</span>
+        </a>
+        <div className="mt-6 border-t border-line pt-4 text-xs text-muted">
           <div className="truncate font-medium text-ink">{name}</div>
           <div className="truncate">{email}</div>
           <form action="/auth/signout" method="post" className="mt-2">
