@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+/* Dark mode follows the OS, or <html data-theme="dark|light"> to force it. */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* ------------------------------------------------------------------
+   Stroopwafel Ventures palette. Use via Tailwind: bg-cream, text-ink,
+   text-canal, bg-tulip, border-line, bg-surface … or var(--waffle).
+   ------------------------------------------------------------------ */
+:root {
+  --waffle: #c8893b;   /* golden-brown waffle */
+  --caramel: #9a5b1e;  /* caramel syrup */
+  --cream: #fbf5e9;    /* page background */
+  --canal: #2f6f9f;    /* links, primary actions */
+  --tulip: #f07a2b;    /* highlights, badges */
+  --ink: #3b2614;      /* text */
+  --muted: #7a6450;    /* secondary text */
+  --surface: #ffffff;  /* cards, tables */
+  --line: #eadfca;     /* borders */
+  --sidebar: #f4ead6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --waffle: #dca25a;
+    --caramel: #c27a36;
+    --cream: #1a130d;
+    --canal: #6aa8d8;
+    --tulip: #ff9550;
+    --ink: #f3e7d3;
+    --muted: #b49c82;
+    --surface: #241a12;
+    --line: #3a2b1e;
+    --sidebar: #20170f;
+  }
+}
+:root[data-theme="dark"] {
+  --waffle: #dca25a;
+  --caramel: #c27a36;
+  --cream: #1a130d;
+  --canal: #6aa8d8;
+  --tulip: #ff9550;
+  --ink: #f3e7d3;
+  --muted: #b49c82;
+  --surface: #241a12;
+  --line: #3a2b1e;
+  --sidebar: #20170f;
+}
+
+@theme inline {
+  --color-waffle: var(--waffle);
+  --color-caramel: var(--caramel);
+  --color-cream: var(--cream);
+  --color-canal: var(--canal);
+  --color-tulip: var(--tulip);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-sidebar: var(--sidebar);
+  --font-sans: var(--font-sans-face), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-face), ui-serif, Georgia, serif;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+a.link { color: var(--canal); }
+a.link:hover { text-decoration: underline; }
+
+/* Rendered markdown in meeting notes */
+.prose-note h3 { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; margin: 1.6rem 0 0.5rem; color: var(--caramel); }
+.prose-note ul { list-style: disc; padding-left: 1.3rem; margin: 0.25rem 0; }
+.prose-note ul ul { list-style: circle; color: var(--muted); }
+.prose-note li { margin: 0.2rem 0; }
+.prose-note li:has(> input[type="checkbox"]) { list-style: none; margin-left: -1.3rem; }
+.prose-note input[type="checkbox"] { margin-right: 0.5rem; accent-color: var(--canal); }
+.prose-note p { margin: 0.4rem 0; }
+.prose-note strong { font-weight: 600; }
+.prose-note a { color: var(--canal); }

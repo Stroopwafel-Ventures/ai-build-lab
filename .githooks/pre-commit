@@ -1,0 +1,6 @@
+#!/bin/sh
+# Blocks commits that would leak participant names/emails. Installed by `npm install`.
+npx --no-install tsx scripts/check-privacy.ts || {
+  echo "Commit blocked: remove participant data from the files above."
+  exit 1
+}
