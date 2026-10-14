@@ -8,3 +8,6 @@ export const DEPARTMENTS = ["engineering", "sales", "marketing", "product", "ops
 export const SENIORITIES = ["junior", "mid", "senior", "lead", "director", "vp", "c-level"] as const;
 export const REMOTE = ["onsite", "hybrid", "remote"] as const;
 export const EMPLOYMENT_TYPES = ["full-time", "part-time", "contract", "fractional"] as const;
+
+/** Public source code for this app, linked from the sidebar and dashboard. */
+export const REPO_URL = "https://github.com/Stroopwafel-Ventures/ai-build-lab";
