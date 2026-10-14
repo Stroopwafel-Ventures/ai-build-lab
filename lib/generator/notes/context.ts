@@ -77,7 +77,7 @@ export function bullet(ctx: NoteCtx, text: string, subs: string[] = [], extra: V
 /** A deadline a little after the meeting, phrased like people do. */
 export function byWhen(ctx: NoteCtx, minDays = 3, maxDays = 21): string {
   const d = new Date(Date.parse(`${ctx.date}T00:00:00Z`) + ctx.rng.int(minDays, maxDays) * 86400000).toISOString().slice(0, 10);
-  return ctx.rng.weighted([[shortDate(d), 6], ["end of month", 1], ["next week", 1], ["before the next check-in", 1]] as const);
+  return ctx.rng.weighted([[shortDate(d), 6], ["end of month", 1], ["next week", 1], ["the next check-in", 1]] as const);
 }
 
 /** Pick a contact matching `filter` who is not excluded or already mentioned. */

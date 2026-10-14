@@ -20,7 +20,7 @@
  */
 import type { CompanyFixture, ContactFixture, ContactType } from "../fixtures";
 import { FN_TAGS, LADDERS, titleFor } from "./careers";
-import { countryOf, INDUSTRY_LABEL } from "./companies";
+import { countryOf, INDUSTRY_LABEL, lowerIndustry } from "./companies";
 import { monthOf, TODAY_MONTH } from "./dates";
 import { emailLocal, slugify, stableId } from "./ids";
 import type { NameFactory } from "./names";
@@ -132,7 +132,7 @@ export function buildContacts(
   const dutch = (c: CompanyFixture) => (c.hq_location.endsWith("Netherlands") && rng.chance(0.5) ? "nl" : undefined);
   const industryTag = (c: CompanyFixture) => {
     const m = companyMeta[c.id];
-    return m.industryKey ? INDUSTRY_LABEL[m.industryKey].toLowerCase() : c.industry.toLowerCase();
+    return m.industryKey ? lowerIndustry(INDUSTRY_LABEL[m.industryKey]) : lowerIndustry(c.industry);
   };
 
   // --- Portfolio execs ------------------------------------------------------
@@ -150,7 +150,8 @@ export function buildContacts(
         : { title: "Co-founder & COO", fn: "operations", bgFn: "operations", level: 6, founder: true },
     ];
     const late = c.stage === "series-b" || c.stage === "series-c+";
-    const pool: { title: string; fn: Fn; level: number }[] = [
+    type ExecRole = { title: string; fn: Fn; level: number };
+    const pool = ([
       { title: late ? "VP Sales" : "Head of Sales", fn: "sales", level: late ? 5 : 4 },
       { title: "Head of Product", fn: "product", level: 4 },
       { title: late ? "CFO" : "Head of Finance", fn: "finance", level: late ? 6 : 4 },
@@ -162,7 +163,7 @@ export function buildContacts(
       ...(ind === "climate" ? [{ title: "Head of Operations", fn: "operations" as Fn, level: 4 }] : []),
       ...(ind === "fintech" ? [{ title: "Head of Compliance", fn: "legal" as Fn, level: 4 }] : []),
       ...(ind === "saas" || ind === "devtools" ? [{ title: "Head of Customer Success", fn: "customer_success" as Fn, level: 4 }] : []),
-    ].filter((r) => !(RESERVED_EXEC_FNS[c.name] ?? []).includes(r.fn) && !(roles[1].fn === r.fn));
+    ] as ExecRole[]).filter((r) => !(RESERVED_EXEC_FNS[c.name] ?? []).includes(r.fn) && !(roles[1].fn === r.fn));
     for (const r of rng.sample(pool, n - 2)) roles.push({ ...r, bgFn: r.fn, founder: false });
 
     roles.forEach((r, i) => {
@@ -187,7 +188,7 @@ export function buildContacts(
         slugKey: `investor:${m.slug}:${i}`, type: "investor", fn: "investing", bgFn: rng.pick(["strategy", "finance", "product", "general_management", "investing"] as Fn[]),
         level, companyId: c.id, companyName: c.name, title: titleFor("investing", level),
         currentStart: TODAY_MONTH - rng.int(8, 84), currentEnd: null, portfolioRole: null, preferRegion: dutch(c),
-        positions: positionsFor(level), extraTags: m.focus.map((f) => INDUSTRY_LABEL[f as keyof typeof INDUSTRY_LABEL].toLowerCase()),
+        positions: positionsFor(level), extraTags: m.focus.map((f) => lowerIndustry(INDUSTRY_LABEL[f as keyof typeof INDUSTRY_LABEL])),
       });
     });
   });
@@ -211,7 +212,7 @@ export function buildContacts(
         slugKey: `corporate:${m.slug}:${i}`, type: "corporate", fn, bgFn: fn, level,
         companyId: c.id, companyName: c.name, title: titleFor(fn, level, m.corpKind === "consultancy"),
         currentStart: TODAY_MONTH - rng.int(6, 120), currentEnd: null, portfolioRole: null, preferRegion: dutch(c),
-        positions: positionsFor(level), extraTags: [c.industry.toLowerCase()],
+        positions: positionsFor(level), extraTags: [lowerIndustry(c.industry)],
       });
     }
   }
@@ -247,7 +248,7 @@ export function buildContacts(
       companyId: employer.id, companyName: employer.name,
       title: titleFor(fn, level, companyMeta[employer.id].corpKind === "consultancy"),
       currentStart: start, currentEnd: between ? TODAY_MONTH - rng.int(1, 6) : null, portfolioRole: null,
-      positions: positionsFor(level), extraTags: [employer.industry.toLowerCase()],
+      positions: positionsFor(level), extraTags: [lowerIndustry(employer.industry)],
     });
   }
 
@@ -261,7 +262,7 @@ export function buildContacts(
       slugKey: `operator:${i}`, type: "operator", fn, bgFn: fn, level,
       companyId: employer.id, companyName: employer.name, title: titleFor(fn, level),
       currentStart: Math.max(companyMeta[employer.id].foundedMonth + 2, TODAY_MONTH - rng.int(4, 72)), currentEnd: null,
-      portfolioRole: null, preferRegion: dutch(employer), positions: positionsFor(level), extraTags: [employer.industry.toLowerCase()],
+      portfolioRole: null, preferRegion: dutch(employer), positions: positionsFor(level), extraTags: [lowerIndustry(employer.industry)],
     });
   }
 

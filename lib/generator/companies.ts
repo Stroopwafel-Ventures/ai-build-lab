@@ -201,6 +201,11 @@ const STAGE_INVESTED_AGO: Record<CompanyStage, [number, number]> = {
   "series-c+": [54, 92],
 };
 
+/** Lowercase for use mid-sentence, but keep acronyms: "B2B SaaS", "AI infrastructure". */
+export function lowerIndustry(s: string): string {
+  return s.split(" ").map((w) => (/[A-Z].*[A-Z]/.test(w) ? w : w.toLowerCase())).join(" ");
+}
+
 export function domainFor(name: string): string {
   return `${slugify(name).replace(/-/g, "")}.example`;
 }

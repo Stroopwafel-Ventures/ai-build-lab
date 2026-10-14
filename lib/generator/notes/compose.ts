@@ -12,7 +12,7 @@
 import type { ContactFixture } from "../../fixtures";
 import type { NextStep, NoteCtx, Section } from "./context";
 import { fullName, userToken } from "./context";
-import { countWords } from "./grammar";
+import { cap, countWords } from "./grammar";
 
 export function attendeeLines(ctx: NoteCtx): string[] {
   const contactLine = (c: ContactFixture) => {
@@ -26,8 +26,8 @@ export function attendeeLines(ctx: NoteCtx): string[] {
 function renderSection(s: Section, take: number): string {
   const lines = [`### ${s.heading}`];
   for (const b of s.bullets.slice(0, take)) {
-    lines.push(`- ${b.text}`);
-    for (const sub of b.subs) lines.push(`  - ${sub}`);
+    lines.push(`- ${cap(b.text)}`);
+    for (const sub of b.subs) lines.push(`  - ${cap(sub)}`);
   }
   return lines.join("\n");
 }
@@ -53,7 +53,7 @@ export function compose(input: ComposeInput): { body: string; words: number } {
     ["### Attendees", ...input.attendees].join("\n"),
     `### Context\n${input.context}`,
     ...sections.map((s) => renderSection(s, take.get(s)!)),
-    ["### Asks & opportunities", ...input.asks.map((a) => `- ${a}`)].join("\n"),
+    ["### Asks & opportunities", ...input.asks.map((a) => `- ${cap(a)}`)].join("\n"),
     renderSteps(input.steps),
   ].join("\n\n");
 

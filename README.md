@@ -96,6 +96,10 @@ npm run dev          # http://localhost:3000
 `npm run seed` is safe to re-run at any time. It wipes and reloads companies, contacts, jobs,
 relationships and notes, but **never deletes people or logins** (admin-added people survive).
 
+**Optional: run Supabase locally** (needs Docker): `npx supabase start` uses `supabase/config.toml`
+(sign-ups off, magic-link template) and applies the migration. Put the printed API URL, anon key and
+service-role key in `.env.local`, then `npm run seed`. Login emails land in Mailpit at http://127.0.0.1:54324.
+
 Fixtures are committed, so seeding never calls an API. To regenerate them:
 
 ```bash

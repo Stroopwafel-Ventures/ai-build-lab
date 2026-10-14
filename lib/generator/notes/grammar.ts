@@ -48,3 +48,8 @@ export function countWords(s: string): number {
 export function cap(s: string): string {
   return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
+
+/** Lowercase for mid-sentence use, but keep acronyms and labels like "Q3", "B2B SaaS", "AI". */
+export function softLower(s: string): string {
+  return s.split(" ").map((w) => (/[A-Z].*[A-Z]|\d/.test(w) ? w : w.toLowerCase())).join(" ");
+}

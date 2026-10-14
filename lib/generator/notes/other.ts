@@ -6,8 +6,8 @@
  */
 import type { ContactFixture, EmploymentFixture, JobFixture } from "../../fixtures";
 import { DEPT_TO_FN } from "../careers";
-import { INDUSTRY_LABEL } from "../companies";
-import { listify } from "../employment";
+import { INDUSTRY_LABEL, lowerIndustry } from "../companies";
+import { listify, roleAt } from "../employment";
 import type { Fn } from "../types";
 import { bullet, fullName, mentionContact, t, userToken, userWithRole, type Bullet, type NoteCtx, type Section } from "./context";
 import { money } from "./grammar";
@@ -17,7 +17,6 @@ type Gen = (ctx: NoteCtx) => Section | null;
 const h = (ctx: NoteCtx, options: string[]) => t(ctx, ctx.rng.pick(options));
 const year = (iso: string | null) => (iso ? iso.slice(0, 4) : "?");
 export const stageLabel = (s: string | null) => ({ "pre-seed": "pre-seed", seed: "seed", "series-a": "Series A", "series-b": "Series B", "series-c+": "Series C+" } as Record<string, string>)[s ?? ""] ?? "early-stage";
-const GOLDEN_CORPS = ["Noordhaven Bank", "Assistora", "Veenstroom Energy", "Huisgoed Retail Group"];
 
 function history(ctx: NoteCtx, c: ContactFixture): EmploymentFixture[] {
   return [...(ctx.employmentByContact.get(c.id) ?? [])].sort((a, b) => (b.started_on ?? "").localeCompare(a.started_on ?? ""));
@@ -30,7 +29,7 @@ export const background: Gen = (ctx) => {
   const bullets: Bullet[] = rows.slice(0, 4).map((e, i) => {
     const span = `${year(e.started_on)}–${e.finished_on ? year(e.finished_on) : "present"}`;
     const lead = i === 0 && !e.finished_on ? "[Currently|Now]" : i === 0 ? "Most recently" : "[Before that|Earlier]";
-    const where = ["Self-employed", "Independent"].includes(e.company_name) ? `${e.title}, self-employed` : `${e.title} at ${e.company_name}`;
+    const where = roleAt(e.title ?? "", e.company_name);
     return bullet(ctx, `${lead} ${where} (${span})`, [
       e.description ?? t(ctx, "[Broad remit|Hands-on role], [reporting to the founders|reporting to the CEO|in a team of about {n}]", { n: ctx.rng.int(5, 40) }),
       ...(i === 0 ? [t(ctx, `[Strongest stories|Best examples] are about ${listify(p.expertise_tags.slice(0, 2))}`)] : []),
@@ -42,6 +41,8 @@ export const background: Gen = (ctx) => {
       "[Speaks|Fluent in] [Dutch and English|English, Dutch and German|English and French]",
     ])
   );
+  bullets.push(bullet(ctx, "[Career pattern|Pattern]: [roughly three years per role|steady progression|a mix of scale-ups and one corporate stint]", ["[Moves|Moved] [for scope|for the team|when growth stalled], [not just|rather than] for title", "[No|One] [gap|break] in the CV[, explained by a sabbatical|]"]));
+  bullets.push(bullet(ctx, "[Side projects|Outside work]: [mentors at an accelerator|angel invests small tickets|organises a meetup|writes a newsletter]", ["[Good|Useful] [signal|indicator] of [network|community standing]"]));
   return { key: "background", heading: h(ctx, ["Background", "Career so far", "Experience", "Profile"]), bullets };
 };
 
@@ -83,6 +84,11 @@ export const lookingFor: Gen = (ctx) => {
       "[Less interested in|Not keen on] [pre-seed chaos|large corporates|consumer businesses]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Ideal|Preferred] [first 90 days|start]: [listening tour then a plan|fixing one urgent problem|building the team]", ["[Expects|Wants] [a clear mandate|explicit goals] from the CEO [up front|in week one]"]));
+  bullets.push(bullet(ctx, "[Industries|Domains] [to avoid|they would rather avoid]: [gambling|crypto|ad tech|none in particular]", ["[Cares|Cares a lot] about [the product being useful|the mission|impact] [beyond|as well as] the role"]));
+  bullets.push(bullet(ctx, "[Has|Already has] [a view|opinions] on [which portfolio companies|which of our companies] [look interesting|they would like to meet]", [
+    "[Mentioned|Named] [two|a couple of] companies [from our website|they had read about]",
+  ]));
   return { key: "looking", heading: h(ctx, ["What they're looking for", "What's next", "Goals", "Next role"]), bullets };
 };
 
@@ -98,6 +104,8 @@ export const compensation: Gen = (ctx) => {
       "[Has done|Did] [this before|something similar] at [a previous company|their last role] [and it worked well|with good results]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Relocation|Visa] [not needed|not an issue]; [already|currently] [based in|living in] the Netherlands", ["[Their family situation supports|Their plans fit with] a [start|move] in [{nextQ}|early {nextYear}]"]));
+  bullets.push(bullet(ctx, "[Counter-offer risk|Risk of a counter-offer] [moderate|low|real]: [current employer values them|they have been promoted recently|their manager is leaving]", ["[We should move fast|Worth keeping the process tight] if a company is interested"]));
   return { key: "comp", heading: h(ctx, ["Compensation & timing", "Comp & availability", "Timing"]), bullets };
 };
 
@@ -111,10 +119,22 @@ export const portfolioFit: Gen = (ctx) => {
     ctx.steps.push({ owner: userToken(userWithRole(ctx, ["talent"])), action: `intro ${p.first_name} to ${co.name} for the ${j.title} role`, by: t(ctx, "[next week|end of week|{soon}]") });
     return bullet(ctx, `${co.name}: ${j.title} (${j.location}) [is a|looks like a] ${fit} fit`, [
       fit === "partial" ? "[Seniority|Scope] [slightly|a bit] [above|below] what they want" : `[Relevant|Directly relevant] experience in ${listify(p.expertise_tags.slice(0, 2))}`,
-      `${co.name} is a ${stageLabel(co.stage)} ${co.industry.toLowerCase()} company with ${co.employee_count_range} people`,
+      `${co.name} is a ${stageLabel(co.stage)} ${lowerIndustry(co.industry)} company with ${co.employee_count_range} people`,
     ]);
   });
-  if (!bullets.length) bullets.push(bullet(ctx, "[Nothing live|No open role] in the portfolio that fits right now", ["[Keep warm|Worth keeping warm] for [the next wave of Series A hiring|two companies planning to hire in {nextQ}]"]));
+  if (!bullets.length) bullets.push(bullet(ctx, "[Nothing live|No open role] in the portfolio that fits right now", ["[Keep warm|Worth keeping warm] for [the next wave of Series A hiring|companies planning to hire in {nextQ}]"]));
+  // Roles that will open after this conversation (consistent with jobs.posted_on).
+  const m = ctx.world.contactMeta[p.id];
+  const upcoming = ctx.world.jobs.filter((j) => j.posted_on > ctx.date && (DEPT_TO_FN[j.department] as Fn[]).includes(m.fn) && !ctx.world.golden.some((g) => g.jobId === j.id));
+  for (const j of ctx.rng.sample(upcoming, 2)) {
+    const co = companyById.get(j.company_id)!;
+    bullets.push(bullet(ctx, `[Upcoming|Coming up]: ${co.name} [is planning to open|expects to open] a ${j.title} role [in the coming months|soon]`, [
+      `[Worth|Good to] [flag|mention] ${p.first_name} to ${co.name} [early|before the role goes live]`,
+    ]));
+  }
+  bullets.push(bullet(ctx, `[Outside the portfolio|Beyond our companies], ${p.first_name} [is also talking to|has interest from] [a larger scale-up|two Series B companies|a US company opening in Amsterdam]`, [
+    "[Means|So] [we should|we need to] move [quickly|fast] if [a founder|someone] is interested",
+  ]));
   if (jobs[0]) ctx.summaryBits.push(`possible fit for ${listify(jobs.map((j) => j.title))}`);
   return { key: "fit", heading: h(ctx, ["Fit with portfolio roles", "Portfolio matches", "Possible roles", "Where they could fit"]), bullets, pinned: bullets.length };
 };
@@ -131,6 +151,10 @@ export const strengths: Gen = (ctx) => {
       "[Wants|Looking for] a [manager|founder] who will [coach|stretch] them on [strategy|people leadership]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Overall|Overall view]: [strong yes for the right role|good, not yet exceptional|promising, needs the right environment]", ["[Would introduce them to|Will share the profile with] [one or two|two] founders [first|before a wider share]", "[Score|Our rating]: [4|3.5|4.5] out of 5 on the talent scorecard"]));
+  bullets.push(bullet(ctx, "[Risk|Main risk] [for a founder|for a hiring manager]: [may want to move faster to management than the role allows|could be expensive relative to stage|limited experience at very early stage]", [
+    "[Mitigation|Way to handle it]: [be explicit about scope|discuss the growth path openly|start with a clear 6-month plan]",
+  ]));
   return { key: "strengths", heading: h(ctx, ["Strengths & watch-outs", "Assessment", "Impressions"]), bullets };
 };
 
@@ -148,7 +172,7 @@ export const references: Gen = (ctx) => {
     if (ctx.world.contactMeta[other.id].duplicateOf) continue;
     ctx.mentioned.add(other.id);
     found.push(bullet(ctx, `Overlapped with ${fullName(other)} at ${e.company_name}`, [
-      `${other.first_name} is now ${other.current_title ?? "between roles"}${other.current_company_name ? ` at ${other.current_company_name}` : ""}; [could be a reference|worth asking for a back-channel]`,
+      `${other.first_name} is now ${other.current_title ? roleAt(other.current_title, other.current_company_name) : "between roles"}; [could be a reference|worth asking for a back-channel]`,
     ]));
     if (found.length >= 2) break;
   }
@@ -168,7 +192,7 @@ export const fundOverview: Gen = (ctx) => {
       `[About|Roughly] ${ctx.rng.int(30, 75)}% [deployed|committed] so far; [pace of|aiming for] ${ctx.rng.int(6, 14)} new investments a year`,
     ]),
     bullet(ctx, `[Initial cheques|First cheques] of ${money(size * 1e6 * 0.012)}–${money(size * 1e6 * 0.04)}, [reserves of|reserving] [1:1|about 1.5x] for follow-ons`, ["[Prefer to|Like to] [lead|co-lead] and take a board seat[ from Series A|]"]),
-    bullet(ctx, `Team of ${ctx.rng.int(3, 7)} partners[ plus a platform lead| and a small investment team|]`, ["[Each partner|Partners] [covers|cover] [one or two|two] sectors; [decisions|investment decisions] by [consensus|majority]"]),
+    bullet(ctx, `Team of ${ctx.rng.int(3, 7)} partners[ plus a platform lead| and a small investment team|]`, ["[Each partner covers|Partners cover] [one or two|two] sectors; [decisions|investment decisions] by [consensus|majority]"]),
     bullet(ctx, `[Portfolio|Current portfolio] of ${ctx.rng.int(12, 45)} companies, [mostly|largely] in [Benelux|Northern Europe|the UK and DACH]`, [
       "[Recent|Latest] investments [include|are] [two AI tooling companies|a payments startup|a grid-software company] [at seed|at Series A]",
     ]),
@@ -176,12 +200,13 @@ export const fundOverview: Gen = (ctx) => {
       "[Next fund|Fund raising] [planned|expected] in [{nextYear}|about two years]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Fund life|Fund timeline]: [investment period runs to|investing until] {nextYear} [plus|with] [two|three] years of follow-ons", ["[Pace|Deployment pace] [on track|slightly behind plan] [given|because of] [market conditions|valuations]"]));
   return { key: "fund", heading: h(ctx, ["Fund overview", "About the fund", "Fund & strategy"]), bullets };
 };
 
 export const thesis: Gen = (ctx) => {
   const focus = ctx.world.companyMeta[ctx.company!.id].focus;
-  const labels = focus.map((f) => INDUSTRY_LABEL[f].toLowerCase());
+  const labels = focus.map((f) => lowerIndustry(INDUSTRY_LABEL[f]));
   const bullets: Bullet[] = [
     bullet(ctx, `Focus areas: ${listify(labels)}`, [`[Excited about|Spending a lot of time on] [AI-native workflows in regulated industries|infrastructure for the energy transition|vertical software with embedded payments|developer tooling for AI agents]`]),
     bullet(ctx, "[Avoiding|Staying away from] [consumer|hardware-heavy models|businesses that depend on a single channel] [for now|in this fund]", ["[Learned|Lesson] from [a write-off|the last fund]: [avoid|be careful with] [capital-heavy|channel-dependent] models"]),
@@ -194,6 +219,7 @@ export const thesis: Gen = (ctx) => {
       "[Changed|Shifted] how they [think about|weigh] [early traction|founder-market fit]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Sourcing|Deal sourcing] [mostly|largely] [through|via] [founders|angels|scouts] and [university spin-outs|accelerators]", ["[Inbound|Cold inbound] [rarely|seldom] [leads to|results in] investments"]));
   return { key: "thesis", heading: h(ctx, ["Thesis & focus", "What they invest in", "Investment focus"]), bullets };
 };
 
@@ -201,7 +227,7 @@ export const ourRaising: Gen = (ctx) => {
   const focus = ctx.world.companyMeta[ctx.company!.id].focus;
   const goldenCos = new Set(ctx.world.golden.map((g) => g.companyId));
   const cos = ctx.rng.sample(ctx.world.companies.filter((c) => c.kind === "portfolio" && focus.includes(ctx.world.companyMeta[c.id].industryKey!) && !goldenCos.has(c.id)), 3);
-  const bullets: Bullet[] = cos.map((c) => bullet(ctx, `${c.name} (${stageLabel(c.stage)}, ${c.industry.toLowerCase()}): [likely raising|planning a raise|might raise] in [{nextQ}|the next six months|early {nextYear}]`, [
+  const bullets: Bullet[] = cos.map((c) => bullet(ctx, `${c.name} (${stageLabel(c.stage)}, ${lowerIndustry(c.industry)}): [likely raising|planning a raise|might raise] in [{nextQ}|the next six months|early {nextYear}]`, [
     `[Builds|Makes] ${ctx.world.companyMeta[c.id].product}; [they asked for|they'd like] [the deck|a first call|an update in a month]`,
   ]));
   cos.forEach((c) => ctx.steps.push({ owner: userToken(userWithRole(ctx, ["investment"])), action: `send the ${c.name} one-pager`, by: t(ctx, "[{soon}|next week]") }));
@@ -213,12 +239,13 @@ export const coinvest: Gen = (ctx) => {
   const bullets: Bullet[] = [
     bullet(ctx, "[Open to|Keen on] sharing deal flow [where we overlap|in shared focus areas]", ["[Would like|Want] a [quarterly|bi-monthly] call between [the partnerships|the investment teams]"]),
     bullet(ctx, "[Process|Their process]: partner meeting [every Monday|weekly], [term sheet within|typically] [three to five|four to six] weeks of first meeting", ["[Prefer|Strongly prefer] warm intros via [co-investors|founders they know]"]),
-    bullet(ctx, "[Platform support|Value-add]: [talent network and an executive search partner|US go-to-market programme|a founder CFO community]", ["[Founders|Portfolio founders] [rate|use] it [highly|a lot], [especially|mostly] for [senior hires|first US hires]"]),
+    bullet(ctx, "[Platform support|Value-add]: [talent network and an executive search partner|US go-to-market programme|a founder CFO community]", ["[Founders rate it highly|Portfolio founders use it a lot], [especially|mostly] for [senior hires|first US hires]"]),
     bullet(ctx, "[Reference calls|References]: [two|three] founders [speak highly of|recommend] the partner [we met|in the room]", ["[Worth|Good to] [cross-check|double-check] with [our|portfolio] founders who [know them|have worked with them]"]),
     bullet(ctx, "[Board style|On boards they are]: [hands-off between meetings|very involved in hiring|strong on finance and governance]", [
       "[Founders|Two founders we know] [describe them as|say they are] [supportive in hard moments|demanding but fair]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Co-investors|Usual co-investors]: [mostly UK and German funds|a group of Nordic seed funds|US funds at Series B]", ["[Open to|Keen on] [adding|meeting] more Benelux [co-investors|partners]"]));
   return { key: "coinvest", heading: h(ctx, ["Co-investment & process", "How they work", "Relationship"]), bullets };
 };
 
@@ -251,6 +278,7 @@ export const expertise: Gen = (ctx) => {
       "[Less|Limited] experience with [deep tech|consumer|very early teams]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Tools|Frameworks] they use: [a 13-week cash model|a pricing calculator|a hiring scorecard|a board-pack template]", ["[Will|Offered to] [share|send] [a copy|templates] [for the portfolio library|with the community]"]));
   return { key: "expertise", heading: h(ctx, ["Where they can help", "Expertise", "Areas of expertise", "Market view"]), bullets };
 };
 
@@ -279,6 +307,7 @@ export const terms: Gen = (ctx) => {
       "[Standard|Typical] [vesting|equity] for advisory work: [0.1–0.25%|0.2–0.5%] over two years",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Preferred|Best] [way in|first step]: a [free|short] intro call with the founder[, then a scoped proposal|]", ["[Usually|Typically] [scopes|sends a proposal] within a week"]));
   return { key: "terms", heading: h(ctx, ["Terms & availability", "Availability", "How to work together"]), bullets };
 };
 
@@ -314,6 +343,9 @@ export const corpPriorities: Gen = (ctx) => {
       "[Progress|Status] [reviewed|checked] [quarterly|every six months] by [the executive committee|the board]",
     ])
   );
+  bullets.push(bullet(ctx, "[Leadership|The leadership team] [changed|was reshuffled] [last year|recently], [with|bringing] [a new CEO|a new COO|a new digital lead] [who is|keen on being] [more open to startups|pushing for speed]", [
+    "[Opportunity|Window] [to get in early|for new partners] [while priorities are being set|before budgets are locked]",
+  ]));
   return { key: "priorities", heading: h(ctx, ["Their priorities", "What they care about", "Strategic priorities"]), bullets };
 };
 
@@ -331,6 +363,9 @@ export const corpProcess: Gen = (ctx) => {
       "[Tip|Advice]: [flag deviations early|send redlines in one round]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Reference customers|References] [matter a lot|are essential]: [they ask for|they want] [two Dutch references|a comparable customer] [before|ahead of] [any pilot|signing]", [
+    "[Portfolio|Our] companies with [strong|good] [Benelux|local] references [have an edge|stand out]",
+  ]));
   return { key: "process", heading: h(ctx, ["How they work with startups", "Pilot & procurement process", "Working with them"]), bullets };
 };
 
@@ -350,6 +385,7 @@ export const corpFit: Gen = (ctx) => {
   bullets.push(
     bullet(ctx, "[Prefer|Want] [one or two|a small number of] [well-prepared|high-quality] intros over a long list", ["[Each|Every] intro should [come with|include] a [one-pager|short case] and a [named|clear] use case"])
   );
+  bullets.push(bullet(ctx, "[Also|Separately] [asked for|requested] [a list of|ideas for] startups in [AI for customer service|energy management|workforce scheduling]", ["[Will|To] [check|scan] the [portfolio|wider network] and [come back|revert] [within two weeks|by {soon}]"]));
   return { key: "corpfit", heading: h(ctx, ["Portfolio fit", "Relevant portfolio companies", "Possible matches"]), bullets };
 };
 
@@ -364,6 +400,11 @@ export const eventHighlights: Gen = (ctx) => {
   bullets.push(
     bullet(ctx, `[Lots of|Plenty of] [founders|operators] [asking about|talking about] [hiring senior engineers|AI pilots|fundraising timelines]`, ["[Useful|Good] [signal|input] for the [next portfolio newsletter|community programme]"])
   );
+  bullets.push(bullet(ctx, "[Mentioned|Brought up] [a time they disagreed with their CEO|pushing back on a bad deal|stopping a launch that was not ready]", ["[Handled|Dealt with] it [constructively|calmly], [with data|with a clear alternative]"]));
+  bullets.push(bullet(ctx, "[Best|Most useful] [conversation|exchange] of the [evening|day] was about [hiring in a tight market|AI pilots that actually ship|selling to large corporates]", [
+    "[Several|A few] [people|founders] [shared|compared] [numbers|notes] [openly|candidly]",
+    "[Worth|Could be worth] [writing up|sharing] [for the community|in the newsletter]",
+  ]));
   return { key: "highlights", heading: h(ctx, ["Conversation highlights", "Who we spoke to", "Key conversations"]), bullets };
 };
 
@@ -380,6 +421,7 @@ export const eventConnections: Gen = (ctx) => {
   bullets.push(
     bullet(ctx, `[Could|Might] [invite|ask] ${ctx.people.map((p) => p.first_name).join(" and ")} to the next [founder breakfast|community evening]`, ["[Would|Should] [fit|work] well in the [operator|founder] [crowd|community]"])
   );
+  bullets.push(bullet(ctx, "[Also|Plus] [a possible|potential] [candidate|hire] for [a portfolio company|one of our companies] [later|down the line]", ["[To|Will] [flag|mention] to the talent team [informally|for now]"]));
   return { key: "connections", heading: h(ctx, ["Possible connections", "Who they should meet", "Intro ideas"]), bullets };
 };
 
@@ -393,6 +435,7 @@ export const eventOther: Gen = (ctx) => {
       "[One|Two] [mentioned|flagged] [hiring pain|fundraising timing] [worth following up on|to pick up in the next check-in]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Picked up|Heard] [a rumour|chatter] that [a large corporate|one of the banks] is [launching|building] a [startup programme|venture arm]", ["[Worth|Should] [verifying|check] [before|ahead of] [the next partnerships meeting|our next call with them]"]));
   return { key: "other", heading: h(ctx, ["Other notes", "Misc", "Also"]), bullets };
 };
 
@@ -415,18 +458,20 @@ export const leadershipStyle: Gen = (ctx) => {
     ]),
     bullet(ctx, "[Feedback culture|On feedback]: [asks for it weekly|runs regular retros|prefers direct, in-the-moment feedback]", ["[Matches|Consistent with] what [a former colleague|their reference] [said|told us]"]),
   ];
+  bullets.push(bullet(ctx, "[Hiring track record|Track record in hiring]: [most hires still at the company|built a diverse team|promoted three people internally]", ["[Uses|Relies on] [structured interviews|work samples|a clear scorecard]"]));
   return { key: "style", heading: h(ctx, ["How they work", "Leadership & working style", "Working style"]), bullets };
 };
 
 export const candidateQuestions: Gen = (ctx) => {
   const bullets: Bullet[] = [
     bullet(ctx, "Asked [a lot|several questions] about [founder dynamics|runway|how decisions get made] at the portfolio companies", ["[Good sign|Signals] [they have been burned before|they think like an owner]"]),
-    bullet(ctx, "[Wanted to know|Asked] how Stroopwafel [supports|helps] portfolio hires [after joining|in the first 90 days]", [`Pointed them to the [operator community|portfolio Slack] run by ${userToken(userWithRole(ctx, ["community", "platform"]))}`]),
+    bullet(ctx, "[Wanted to know|Asked] how Stroopwafel [supports|helps] portfolio hires [after joining|in the first 90 days]", [`Pointed them to the [operator community|portfolio community channel] run by ${userToken(userWithRole(ctx, ["community", "platform"]))}`]),
     bullet(ctx, "[Curious|Asked] about [equity norms|typical option packages] at [Series A|this stage] in the Netherlands", ["[Shared|Gave] [rough ranges|the usual ranges] and the [new|current] tax treatment of options"]),
     bullet(ctx, "[Asked|Wanted to know] [which founders are best to work for|where the strongest teams are] [in the portfolio|among our companies]", [
       "[Kept it|Stayed] [high level|general]; [suggested|offered] [specific intros|to set up calls] once there is a concrete role",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Asked|Wanted to know] [what the hardest part of the role would be|how fast the company is growing|who they would report to]", ["[Good|Sharp] [questions|question], [focused on|showing interest in] [impact|the team] [rather than|not just] perks"]));
   return { key: "questions", heading: h(ctx, ["Questions they asked", "What they wanted to know", "Their questions"]), bullets };
 };
 
@@ -440,6 +485,7 @@ export const marketView: Gen = (ctx) => {
       "[Non-AI|Other] [founders|companies] [need|must show] [efficiency|clear unit economics] to raise",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Secondary|Secondaries] [market|activity] [growing|more active]; [founders|early employees] [selling|taking] [some liquidity|small amounts] in [Series B|later] rounds", ["[Mixed|Mixed views] on whether it [helps|hurts] [alignment|retention]"]));
   return { key: "market", heading: h(ctx, ["Market view", "Market notes", "How they see the market"]), bullets };
 };
 
@@ -452,6 +498,7 @@ export const questionsForUs: Gen = (ctx) => {
       "[Shared|Gave] [examples|a few data points] from [recent|the latest] portfolio [rounds|hires]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Asked|Wanted to know] which [portfolio companies|of our companies] [need US help|are preparing to expand]", ["[Offered|Can offer] [intros|connections] to [US operators|their US network]"]));
   return { key: "theirq", heading: h(ctx, ["Questions for us", "What they asked us", "Their questions"]), bullets };
 };
 
@@ -466,6 +513,7 @@ export const recentWork: Gen = (ctx) => {
       "[Content|Material] [could|would] [work|be useful] for the [portfolio newsletter|founder community]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Previously|Earlier] [helped|supported] a [portfolio company of another fund|founder they mentor] through [a down round|an acquisition|a leadership change]", ["[Lessons|Takeaways]: [communicate early with investors|keep the team informed|protect the core product team]"]));
   return { key: "recent", heading: h(ctx, ["Recent engagements", "Recent work", "Track record"]), bullets };
 };
 
@@ -482,6 +530,7 @@ export const corpOrg: Gen = (ctx) => {
       "[Best path|Route in]: [find a BU sponsor first|land a small paid pilot|start with one country]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Their|The] [CTO office|IT team] [has|holds] [a veto|a strong say] on [new vendors|any integration]", ["[Worth|Good idea to] [involve|meet] them [early|before the pilot]"]));
   return { key: "org", heading: h(ctx, ["Their organisation", "Who's who", "Org & stakeholders"]), bullets };
 };
 
@@ -494,6 +543,7 @@ export const corpConcerns: Gen = (ctx) => {
       "[Want|Asked for] startups that [bring implementation support|can work with their IT partner]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Brand|Reputation] [risk|concerns] with [customer-facing|consumer-facing] pilots", ["[Prefer|Want] [internal|back-office] use cases [first|to start with]"]));
   return { key: "concerns", heading: h(ctx, ["Open questions & concerns", "Concerns", "Risks they raised"]), bullets };
 };
 
@@ -507,6 +557,7 @@ export const eventTrends: Gen = (ctx) => {
       "[Could|Might] [be|make] a good [topic|theme] for a [portfolio session|community event]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Fewer|Less] [questions|talk] about [crypto|consumer apps] than last year; [more|lots more] about [industrial AI|energy|defence tech]", ["[Reflects|Mirrors] [where capital is going|investor appetite] [right now|this year]"]));
   return { key: "trends", heading: h(ctx, ["Themes we heard", "Trends", "What people were talking about"]), bullets };
 };
 
@@ -537,6 +588,7 @@ export const highlights: Gen = (ctx) => {
       "[Rare|Unusual] for [someone in this function|this level]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Mentioned|Brought up] [a time they disagreed with their CEO|pushing back on a bad deal|stopping a launch that was not ready]", ["[Handled|Dealt with] it [constructively|calmly], [with data|with a clear alternative]"]));
   return { key: "highlights", heading: h(ctx, ["Highlights from the conversation", "Stories that stood out", "Track record", "Notable work"]), bullets };
 };
 
@@ -544,11 +596,11 @@ export const investorPortfolio: Gen = (ctx) => {
   const fund = ctx.company!.name;
   const bullets: Bullet[] = [
     bullet(ctx, `${fund} [made|closed] ${ctx.rng.int(3, 9)} new investments in the last twelve months`, [
-      `[Mostly|Mainly] [seed|Series A] [rounds|deals] of ${money(ctx.rng.int(15, 60) * 100_000)}–${money(ctx.rng.int(70, 150) * 100_000)}`,
-      "[Two|One] [of them|follow-ons] [co-led|syndicated] with [UK|German|Nordic] funds",
+      `[Mostly|Mainly] [seed|Series A] [rounds|deals] of ${money(ctx.rng.int(12, 30) * 100_000)}–${money(ctx.rng.int(35, 80) * 100_000)}`,
+      "[Two follow-ons|One follow-on] [co-led|syndicated] with [UK|German|Nordic] funds",
     ]),
     bullet(ctx, "[Strongest|Best-performing] [companies|portfolio companies] [are|sit] in [vertical software|infrastructure|payments]", [
-      "[Two|Three] [markups|up-rounds] in the past year; [one|no] [write-downs|write-offs] [announced|so far]",
+      "[Two|Three] [markups|up-rounds] in the past year; [one write-down|no write-offs] so far",
     ]),
     bullet(ctx, "[Portfolio support|Platform] [is|has become] a bigger part of the pitch: [talent|go-to-market|finance] [programmes|workshops]", [
       `[Open to|Interested in] [joint|shared] [sessions|workshops] with ${userToken(userWithRole(ctx, ["platform", "community", "investment"]))}`,
@@ -560,6 +612,7 @@ export const investorPortfolio: Gen = (ctx) => {
       "[DPI|Distributions] [still modest|below where LPs want it]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Notable|A notable] [portfolio company|company] [just raised|recently closed] a [Series B|large round] [led by|with] a [US|London] growth fund", ["[Good|Positive] [signal|sign] for [follow-on demand|Benelux companies] [in general|more broadly]"]));
   return { key: "theirportfolio", heading: h(ctx, ["Their portfolio", "Recent activity", "Portfolio & deployment"]), bullets };
 };
 
@@ -571,14 +624,15 @@ export const collaborate: Gen = (ctx) => {
     bullet(ctx, "[Talked about|Discussed] [co-hosting|running] a [founder dinner|CFO roundtable|talent evening] [together|jointly]", [
       `${userToken(userWithRole(ctx, ["community", "platform", "investment"]))} to [propose dates|check the calendar] for [{nextMonth}|{nextQ}]`,
     ]),
-    bullet(ctx, "[Interested in|Open to] [introductions to|meeting] [our LPs|other Benelux funds|corporate venture teams] we know", [
+    bullet(ctx, "[Interested in|Open to] [meeting some of our LPs|introductions to other Benelux funds|meeting corporate venture teams we know]", [
       "[Reciprocal|In return], [they offered|they can share] [intros to US funds|their talent network]",
     ]),
     bullet(ctx, "[Talent|Hiring] [overlap|collaboration]: [could share|agreed to share] [candidates|a talent pool] for [senior|exec] roles", [
       `${userToken(userWithRole(ctx, ["talent", "platform"]))} to [align|connect] with their [platform|talent] lead`,
     ]),
   ];
-  return { key: "collab", heading: h(ctx, ["Ways to collaborate", "Working together", "Next steps on collaboration"]), bullets };
+  bullets.push(bullet(ctx, "[Agreed|Discussed] a [light|simple] [rule|principle]: [tell each other early|share before term sheets] when [looking at|evaluating] the same company", ["[Avoids|Prevents] [awkward|unnecessary] [competition|bidding] on [shared|overlapping] deals"]));
+  return { key: "collab", heading: h(ctx, ["Ways to collaborate", "Working together", "How we could collaborate"]), bullets };
 };
 
 export const howTheyWork: Gen = (ctx) => {
@@ -599,6 +653,7 @@ export const howTheyWork: Gen = (ctx) => {
     ]),
     bullet(ctx, "[Availability|Response time] [fast|good]: [usually replies within a day|keeps Fridays for advisory work]", ["[Easy|Straightforward] to [work with|schedule] in the [few|two] interactions so far"]),
   ];
+  bullets.push(bullet(ctx, "[Reporting|Updates] [to the founder|to the board]: [a short written update every two weeks|a monthly dashboard]", ["[Keeps|Likes to keep] [the board|investors] [in the loop|informed] [when asked|if useful]"]));
   return { key: "howwork", heading: h(ctx, ["How they work", "Engagement model", "Working style"]), bullets };
 };
 
@@ -617,6 +672,7 @@ export const expertQuestions: Gen = (ctx) => {
       "[Seemed|Looked] [keen|genuinely interested] [rather than|not just] [selling|looking for work]",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Asked|Wanted to know] [how other experts on the bench|whether others] [are compensated|get introduced]", ["[Answered|Explained] [that founders decide|the light process] and [we only|that we only] [make warm intros|connect when there is a need]"]));
   return { key: "expertq", heading: h(ctx, ["Questions they asked", "Their questions", "What they wanted to know"]), bullets };
 };
 
@@ -654,6 +710,7 @@ export const budgetTiming: Gen = (ctx) => {
       "[Worth|Important to] [flag|raise] [early|up front] for [cash-sensitive|smaller] companies",
     ]),
   ];
+  bullets.push(bullet(ctx, "[Multi-year|Longer] [contracts|commitments] [need|require] [board|CFO] approval [above|over] [€250k|€500k]", ["[Pilots|Small pilots] [can|may] be [signed|approved] [locally|by the BU director]"]));
   return { key: "budget", heading: h(ctx, ["Budget & timing", "Budget and decision-making", "How decisions get made"]), bullets };
 };
 
@@ -663,8 +720,8 @@ export const eventPeople: Gen = (ctx) => {
   for (const p of ctx.people) {
     const rows = history(ctx, p);
     const prev = rows.find((r) => r.finished_on);
-    bullets.push(bullet(ctx, `${fullName(p)}: ${p.current_title ?? "between roles"}${p.current_company_name ? ` at ${p.current_company_name}` : ""}`, [
-      prev ? `Previously ${prev.title} at ${prev.company_name}` : "[Long tenure|Has been there a while]",
+    bullets.push(bullet(ctx, `${fullName(p)}: ${p.current_title ? roleAt(p.current_title, p.current_company_name) : "between roles"}`, [
+      prev ? `Previously ${roleAt(prev.title ?? "", prev.company_name)}` : "[Long tenure|Has been there a while]",
       `[Working on|Focused on] ${listify(p.expertise_tags.slice(0, 2))}; [looking for|interested in] [peers to compare notes with|startups in this space|their next hire]`,
     ]));
     bullets.push(bullet(ctx, `[How we could help|What ${p.first_name} needs]: [intros to founders|a sounding board on hiring|visibility for their programme|feedback on a new idea]`, [
@@ -676,6 +733,11 @@ export const eventPeople: Gen = (ctx) => {
       "[Most|All] [three|of them] [open to|happy with] [follow-up intros|a coffee]",
     ])
   );
+  for (const p of ctx.people) {
+    bullets.push(bullet(ctx, `[Follow-up with|Next with] ${p.first_name}: [a coffee in {nextMonth}|an intro email this week|an invite to the next community evening]`, [
+      "[Context|Why]: [shared interest in|overlap with] [our portfolio|two of our companies] [in this area|on this topic]",
+    ]));
+  }
   return { key: "people", heading: h(ctx, ["People we met", "Who we spoke with", "People"]), bullets };
 };
 

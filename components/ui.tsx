@@ -29,7 +29,7 @@ export function PageHeader({ title, subtitle, actions }: { title: ReactNode; sub
 
 export function Card({ title, children, className, actions }: { title?: ReactNode; children: ReactNode; className?: string; actions?: ReactNode }) {
   return (
-    <section className={cx("rounded-2xl border border-line bg-surface p-4 shadow-sm sm:p-5", className)}>
+    <section className={cx("min-w-0 rounded-2xl border border-line bg-surface p-4 shadow-sm sm:p-5", className)}>
       {(title || actions) && (
         <div className="mb-3 flex items-center justify-between gap-2">
           {title && <h2 className="font-display text-lg font-semibold">{title}</h2>}
@@ -100,7 +100,7 @@ export function EmptyState({ art = "stack", children }: { art?: keyof typeof EMP
 
 export function Table({ head, children }: { head: ReactNode[]; children: ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
+    <div className="relative overflow-x-auto rounded-2xl border border-line bg-surface">
       <table className="w-full min-w-[640px] text-left text-sm">
         <thead className="border-b border-line bg-cream/60 text-xs uppercase tracking-wide text-muted">
           <tr>{head.map((h, i) => <th key={i} className="px-3 py-2 font-medium">{h}</th>)}</tr>

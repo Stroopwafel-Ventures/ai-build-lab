@@ -1,7 +1,8 @@
 /**
  * addParticipant(): the ONE function every "add a person" path uses
  * (admin page, CLI, seed script). It is idempotent:
- *   - upserts the `users` row (matched by key, then by any of the emails)
+ *   - upserts the `users` row (matched by key, then any of the emails, then
+ *     an unambiguous exact full name)
  *   - creates a confirmed Supabase auth user for each email that lacks one
  *   - links each email in `user_logins`
  * Calling it again with a new email just adds that email.
@@ -97,6 +98,11 @@ export async function addParticipant(
     const { data } = await db
       .from("user_logins").select("user_id, users(id, key)").in("email", emails).limit(1).maybeSingle();
     existing = (data?.users as unknown as { id: string; key: string } | null) ?? null;
+  }
+  if (!existing && !input.key) {
+    // Last resort: same full name (case-insensitive), only if unambiguous.
+    const { data } = await db.from("users").select("id, key").ilike("full_name", input.full_name.trim().replace(/[%_]/g, ""));
+    if (data?.length === 1) existing = data[0]!;
   }
 
   // 2. Upsert the users row.

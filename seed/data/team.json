@@ -1,0 +1,37 @@
+[
+  {
+    "key": "i01",
+    "full_name": "Maartje Oosterveld",
+    "title": "General Partner",
+    "role": "investment",
+    "avatar_initials": "MO"
+  },
+  {
+    "key": "i02",
+    "full_name": "Henrik Solvang",
+    "title": "General Partner",
+    "role": "investment",
+    "avatar_initials": "HS"
+  },
+  {
+    "key": "i03",
+    "full_name": "Tomasz Wierzbowski",
+    "title": "Principal",
+    "role": "investment",
+    "avatar_initials": "TW"
+  },
+  {
+    "key": "i04",
+    "full_name": "Adaeze Lindqvist-Okoro",
+    "title": "Principal",
+    "role": "investment",
+    "avatar_initials": "AL"
+  },
+  {
+    "key": "i05",
+    "full_name": "Lucía Ferrándiz",
+    "title": "Associate",
+    "role": "investment",
+    "avatar_initials": "LF"
+  }
+]

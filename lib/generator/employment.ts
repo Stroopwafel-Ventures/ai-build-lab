@@ -157,7 +157,7 @@ function writeSummary(c: ContactFixture, m: ContactMeta, stints: Stint[], compan
   const prev = stints.slice(0, -1).reverse();
   const prevNames = prev.map((s) => s.companyName).filter((n, i, a) => a.indexOf(n) === i);
   const before = prevNames.length
-    ? rng.pick([`Before that I was at ${listify(prevNames.slice(0, 2))}.`, `Previously: ${prev.slice(0, 2).map((s) => `${s.title} at ${s.companyName}`).join("; ")}.`, `I spent the earlier part of my career at ${listify(prevNames.slice(0, 3))}.`])
+    ? rng.pick([`Before that I was at ${listify(prevNames.slice(0, 2))}.`, `Previously: ${prev.slice(0, 2).map((s) => roleAt(s.title, s.companyName)).join("; ")}.`, `I spent the earlier part of my career at ${listify(prevNames.slice(0, 3))}.`])
     : "";
   const tags = c.expertise_tags.slice(0, 3);
   const cur = stints[stints.length - 1];
@@ -172,12 +172,12 @@ function writeSummary(c: ContactFixture, m: ContactMeta, stints: Stint[], compan
             `Building ${cur.companyName} (${product}) since ${year}. ${before} Happy to talk about ${listify(tags.slice(0, 2))} with other founders.`,
           ])
         : rng.pick([
-            `${cur.title} at ${cur.companyName}, where we build ${product}. ${before}`,
+            `${roleAt(cur.title, cur.companyName)}, where we build ${product}. ${before}`,
             `I joined ${cur.companyName} in ${year} as ${cur.title}. ${before} Focus areas: ${listify(tags)}.`,
           ]);
     case "investor":
       return rng.pick([
-        `${cur.title} at ${cur.companyName}. I back early-stage teams in ${listify(tags.slice(-2))}. ${before}`,
+        `${roleAt(cur.title, cur.companyName)}. I back early-stage teams in ${listify(tags.slice(-2))}. ${before}`,
         `Investor since ${year}. ${before} Always happy to meet founders working on ${listify(tags.slice(0, 2))}.`,
       ]);
     case "expert":
@@ -188,19 +188,25 @@ function writeSummary(c: ContactFixture, m: ContactMeta, stints: Stint[], compan
       ]);
     case "candidate":
       return m.betweenRoles
-        ? `Most recently ${cur.title} at ${cur.companyName}. ${before} Taking some time to choose my next role, ideally in ${listify(tags.slice(0, 2))}.`
+        ? `Most recently ${roleAt(cur.title, cur.companyName)}. ${before} Taking some time to choose my next role, ideally in ${listify(tags.slice(0, 2))}.`
         : rng.pick([
-            `${cur.title} at ${cur.companyName}. ${before} Interested in ${listify(tags.slice(0, 2))}.`,
+            `${roleAt(cur.title, cur.companyName)}. ${before} Interested in ${listify(tags.slice(0, 2))}.`,
             `I work on ${listify(tags.slice(0, 2))} at ${cur.companyName}. ${before}`,
           ]);
     case "corporate":
       return rng.pick([
-        `${cur.title} at ${cur.companyName}. ${before} I work with startups on pilots and partnerships when there is a clear business case.`,
-        `${cur.title} at ${cur.companyName} since ${year}. ${before}`,
+        `${roleAt(cur.title, cur.companyName)}. ${before} I work with startups on pilots and partnerships when there is a clear business case.`,
+        `${roleAt(cur.title, cur.companyName)} since ${year}. ${before}`,
       ]);
     default:
-      return `${cur.title} at ${cur.companyName}. ${before}`.trim();
+      return `${roleAt(cur.title, cur.companyName)}. ${before}`.trim();
   }
+}
+
+/** "CFO at Medilane", or "Fractional CFO, self-employed" for people without an employer. */
+export function roleAt(title: string, company: string | null): string {
+  if (!company) return title;
+  return ["Self-employed", "Independent"].includes(company) ? `${title}, self-employed` : `${title} at ${company}`;
 }
 
 export function listify(items: string[]): string {

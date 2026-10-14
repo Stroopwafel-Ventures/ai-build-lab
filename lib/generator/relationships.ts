@@ -24,7 +24,7 @@ const AFFINITY: Record<UserRole, Record<string, number>> = {
   admin: { portfolio_exec: 0.6, investor: 0.3, expert: 0.6, corporate: 0.4, candidate: 0.3, operator: 0.6, other: 0.6 },
 };
 
-const BASE_STRENGTH = [[1, 10], [2, 36], [3, 32], [4, 15], [5, 7]] as const;
+const BASE_STRENGTH = [[1, 12], [2, 38], [3, 33], [4, 12], [5, 5]] as const;
 
 export function buildRelationships(
   contacts: ContactFixture[], meta: Record<string, ContactMeta>, team: TeamMember[], dealTeam: DealTeamFixture[], rng: Rng,
@@ -68,7 +68,7 @@ export function buildRelationships(
 
     // 3. Everyone else: 1–4 knowers chosen by role affinity.
     const already = [...rows.values()].filter((r) => r.contact_id === c.id).length;
-    const knowers = Math.max(0, rng.weighted([[1, 47], [2, 33], [3, 14], [4, 6]] as const) - (already ? 1 : 0));
+    const knowers = Math.max(0, rng.weighted([[1, 60], [2, 29], [3, 8], [4, 3]] as const) - (already ? 1 : 0));
     const candidates = team.filter((t) => ![...rows.keys()].includes(`${t.key}|${c.id}`));
     for (let k = 0; k < knowers; k++) {
       const pick = rng.weighted(candidates.map((t) => [t, AFFINITY[t.role][c.contact_type] ?? 0.5] as const));

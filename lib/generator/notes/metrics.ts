@@ -86,7 +86,8 @@ export function metricsAt(company: CompanyFixture, meta: CompanyMeta, dateIso: s
     customers,
     newLogos: Math.max(1, Math.round(customers * (g / 100) * jitter(0.9, 0.4))),
     churned: rj.int(0, Math.max(1, Math.round(customers * 0.03))),
-    largestDeal: Math.round(jitter(acv * r.int(3, 8), 0.2) / 1000) * 1000,
+    // The largest single contract can never be a silly share of total revenue.
+    largestDeal: Math.round(Math.min(jitter(acv * r.int(2, 5), 0.2), arr * 0.18) / 1000) * 1000,
     pipeline: Math.round(arr * jitter(0.45, 0.4) / 10_000) * 10_000,
     winRate: rj.int(18, 38),
     cycleDays: { fintech: r.int(25, 70), climate: r.int(60, 160), saas: r.int(45, 120), health: r.int(120, 270), devtools: r.int(20, 75), marketplace: r.int(7, 30), aiinfra: r.int(40, 110) }[meta.industryKey!],

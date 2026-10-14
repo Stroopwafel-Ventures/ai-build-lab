@@ -47,9 +47,9 @@ export async function loadFixtures(db: SupabaseClient, log: (msg: string) => voi
   if (teamErr) throw teamErr;
 
   // 2. Key → id map for everyone currently in users.
-  const { data: users, error: usersErr } = await db.from("users").select("id, key, full_name");
+  const { data: users, error: usersErr } = await db.from("users").select("id, key, full_name, title");
   if (usersErr) throw usersErr;
-  const byKey = new Map(users!.map((u) => [u.key as string, u as { id: string; key: string; full_name: string }]));
+  const byKey = new Map(users!.map((u) => [u.key as string, u as { id: string; key: string; full_name: string; title: string | null }]));
   const idOf = (key: string, where: string) => {
     const u = byKey.get(key);
     if (!u) skipped.push(`${where}: unknown user key ${key}`);
@@ -86,14 +86,23 @@ export async function loadFixtures(db: SupabaseClient, log: (msg: string) => voi
   );
 
   const nameOf = (key: string) => byKey.get(key)?.full_name ?? "a Stroopwafel teammate";
+  // Fixtures don't know participants' titles, so attendee lines read
+  // "{{user:p04}} (Stroopwafel Ventures)". Fill in the real title here.
+  const fillNames = (text: string) =>
+    text
+      .replace(/\{\{user:(\w+)\}\} \(Stroopwafel Ventures\)/g, (_, k) => {
+        const u = byKey.get(k);
+        return u ? `${u.full_name} (${u.title ? `${u.title}, ` : ""}Stroopwafel Ventures)` : "a Stroopwafel teammate";
+      })
+      .replace(/\{\{user:(\w+)\}\}/g, (_, k) => nameOf(k));
   const noteRows = (notes as unknown as MeetingNoteFixture[]).map((n) => ({
     id: n.id,
     met_on: n.met_on,
-    title: n.title.replace(/\{\{user:(\w+)\}\}/g, (_, k) => nameOf(k)),
+    title: fillNames(n.title),
     meeting_type: n.meeting_type,
     company_id: n.company_id,
-    summary: n.summary.replace(/\{\{user:(\w+)\}\}/g, (_, k) => nameOf(k)),
-    body: n.body.replace(/\{\{user:(\w+)\}\}/g, (_, k) => nameOf(k)),
+    summary: fillNames(n.summary),
+    body: fillNames(n.body),
     created_by: byKey.get(n.created_by_key)?.id ?? null,
   }));
   counts.meeting_notes = await insertBatches(db, "meeting_notes", noteRows, 100);

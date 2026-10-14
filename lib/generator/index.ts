@@ -44,13 +44,13 @@ export function buildWorld(seed = SEED, log: (msg: string) => void = () => {}): 
 
   // 3. Contacts and clusters
   const { contacts, contactMeta, clusters } = buildContacts(companies, companyMeta, root.fork("contacts"), names);
-  log(`contacts: ${contacts.length} in ${clusters.length} clusters`);
+  log(`contacts: ${contacts.length} generated, ${clusters.reduce((n, c) => n + c.memberIds.length, 0)} of them in ${clusters.length} clusters`);
 
   // 4. Employment (+ light mess: duplicates, unlinked rows)
   const employment = buildEmployment(companies, companyMeta, contacts, contactMeta, clusters, root.fork("employment"));
   plantDuplicates(contacts, contactMeta, employment, root.fork("duplicates"));
   unlinkSomeEmployment(employment, contactMeta, root.fork("unlink"));
-  log(`employment: ${employment.length} positions`);
+  log(`employment: ${employment.length} positions; planted ${contacts.filter((c) => contactMeta[c.id].duplicateOf).length} near-duplicate contacts`);
 
   // 5. Relationships
   const team = teamMembers();
@@ -68,7 +68,7 @@ export function buildWorld(seed = SEED, log: (msg: string) => void = () => {}): 
   employment.push(...golden.employment);
   userContacts.push(...golden.userContacts);
   jobs.push(...golden.jobs);
-  log(`golden scenarios: ${golden.scenarios.length}`);
+  log(`golden scenarios: ${golden.scenarios.length} (+${golden.contacts.length} contacts, +${golden.jobs.length} jobs, +${golden.userContacts.length} relationships)`);
 
   const world: World = {
     companies, companyMeta, team: INVESTMENT_TEAM, teamMembers: team, dealTeam,

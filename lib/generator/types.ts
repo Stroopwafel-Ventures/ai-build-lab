@@ -31,7 +31,7 @@ export interface CompanyMeta {
   product: string;             // "cash management for SMEs"
   customer: string;            // "finance teams at 20-200 person companies"
   foundedMonth: number;        // month number (see dates.ts)
-  focus: string[];             // investors: sectors they back
+  focus: IndustryKey[];        // investors: sectors they back
 }
 
 export interface ContactMeta {

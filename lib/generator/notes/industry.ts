@@ -21,7 +21,29 @@ export interface IndustryProfile {
   volume: { label: string; kind: "money" | "count" | "rate" };
 }
 
-export const INDUSTRY: Record<IndustryKey, IndustryProfile> = {
+/**
+ * A few companies don't fit their industry's default vocabulary (a reusable-
+ * packaging company is "climate" but installs nothing). They get their own.
+ */
+const PROFILE_OVERRIDE: Record<string, string> = { Reclaimr: "circular", Carbonwick: "saas" };
+export const profileKey = (companyName: string, industry: IndustryKey): string => PROFILE_OVERRIDE[companyName] ?? industry;
+
+export const INDUSTRY: Record<string, IndustryProfile> = {
+  circular: {
+    buyers: ["sustainability leads at retailers", "category managers", "store operations directors", "logistics managers"],
+    shipped: ["a returns app for store staff", "crate tracking with QR codes", "a deposit-refund flow at checkout", "automated reverse-logistics planning", "a sustainability dashboard for retailers"],
+    roadmap: ["a second washing hub", "integration with retailer ERP systems", "a deposit scheme for online orders", "a reporting module for packaging-waste regulation"],
+    risks: ["crate losses at store level", "washing capacity in peak weeks", "procurement cycles at large retailers", "packaging regulation timelines slipping"],
+    competitors: ["single-use packaging suppliers bundling 'recyclable' options", "a pallet-pooling incumbent moving into crates", "retailers' in-house reuse pilots"],
+    regulation: ["the EU packaging and packaging-waste regulation", "national deposit-scheme rules", "food-contact hygiene certification"],
+    corpKinds: ["retail", "logistics"],
+    markets: ["Belgium", "Germany", "France"],
+    pricing: ["a fee per crate trip", "a monthly subscription per store", "a fee per trip plus a setup fee per site"],
+    churnReasons: ["a store group pausing its reuse pilot", "a regional chain merging into a larger group"],
+    expansionDrivers: ["more stores per retailer", "new product categories in crates", "online orders moving to reusable packaging"],
+    opsTopics: ["crate washing throughput", "reverse logistics routes", "crate loss rates"],
+    volume: { label: "crates in circulation", kind: "count" },
+  },
   fintech: {
     buyers: ["CFOs at 50–500 person companies", "heads of finance", "platform product leads", "treasury managers"],
     shipped: ["multi-entity support", "the accounting-software sync rewrite", "instant SEPA payouts", "a cash-forecasting module", "approval workflows for larger finance teams", "the new onboarding flow that cut KYB time to under a day"],

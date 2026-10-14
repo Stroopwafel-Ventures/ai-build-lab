@@ -13,7 +13,7 @@
  *   5. compose the markdown body to a target length.
  */
 import type { CompanyFixture, ContactFixture, EmploymentFixture, MeetingNoteFixture, MeetingType } from "../../fixtures";
-import { INDUSTRY_LABEL } from "../companies";
+import { INDUSTRY_LABEL, lowerIndustry } from "../companies";
 import { addDays, daysAgo, monthName, quarterOf, shortDate } from "../dates";
 import { listify } from "../employment";
 import { goldenSpecFor } from "../golden";
@@ -21,9 +21,9 @@ import { stableId } from "../ids";
 import { Rng } from "../rng";
 import type { TeamMember, World } from "../types";
 import { attendeeLines, compose } from "./compose";
-import { fullName, t, userToken, type NextStep, type NoteCtx, type Section } from "./context";
-import { cap, money, type Vars } from "./grammar";
-import { INDUSTRY } from "./industry";
+import { fullName, leadUser, t, userToken, type NextStep, type NoteCtx, type Section } from "./context";
+import { cap, money, softLower, type Vars } from "./grammar";
+import { INDUSTRY, profileKey } from "./industry";
 import { metricsAt } from "./metrics";
 import { planNeeds } from "./needs";
 import { OTHER_SECTIONS } from "./other";
@@ -40,6 +40,13 @@ const EVENTS: [string, string][] = [
   ["the Polder Climate Builders meetup", "Utrecht"], ["an AI builders evening at the Grachtengordel Startup Hub", "Amsterdam"],
   ["the Stroopwafel Ventures portfolio summer party", "Amsterdam"], ["a health-data roundtable", "Leiden"],
 ];
+
+/** How each golden need is summarised in the note's one-line summary. */
+const GOLDEN_SUMMARY: Record<string, string> = {
+  G1: "an intro to SME banking partnerships at Noordhaven Bank", G2: "large-retailer deals stalling at procurement",
+  G3: "the VP Engineering search", G4: "Series C investor intros", G5: "a partnership with Assistora",
+  G6: "board reporting and audit preparation", G7: "a utility pilot partner at Veenstroom Energy", G8: "the Head of Sales, DACH hire",
+};
 
 const NEXT_ROUND: Record<string, [string, number, number]> = {
   "pre-seed": ["seed round", 1.5, 3.5], seed: ["Series A", 6, 12], "series-a": ["Series B", 18, 32], "series-b": ["Series C", 35, 55], "series-c+": ["Series D", 60, 90],
@@ -170,6 +177,7 @@ function dedupe(users: TeamMember[]): TeamMember[] {
 
 export function buildNotes(world: World, rootRng: Rng, seed: number): MeetingNoteFixture[] {
   const rng = rootRng.fork("notes");
+  eventCounter = 0; // events rotate so the few event notes are at different events
   const plans = planNotes(world, rng.fork("plan"));
   const employmentByContact = new Map<string, EmploymentFixture[]>();
   for (const e of world.employment) employmentByContact.set(e.contact_id, [...(employmentByContact.get(e.contact_id) ?? []), e]);
@@ -204,7 +212,7 @@ function buildOne(
   const spec = plan.goldenKey && co ? goldenSpecFor(co.name)! : null;
   const ctx: NoteCtx = {
     rng, world, date: plan.date, type: plan.type, company: co, cmeta,
-    profile: isPortfolio && cmeta ? INDUSTRY[cmeta.industryKey!] : null,
+    profile: isPortfolio && co && cmeta ? INDUSTRY[profileKey(co.name, cmeta.industryKey!)] : null,
     metrics: isPortfolio && co && cmeta ? metricsAt(co, cmeta, plan.date, seed) : null,
     people: plan.people, users: plan.users,
     jobs: co ? world.jobs.filter((j) => j.company_id === co.id) : [],
@@ -225,14 +233,13 @@ function buildOne(
     const cto = execs.find((e) => /CTO|COO/.test(e.current_title ?? "") && e.id !== ceo.id) ?? ceo;
     const [round, lo, hi] = NEXT_ROUND[co.stage!];
     const runwayEnd = addDays(plan.date, m.runway * 30);
-    const lead = world.dealTeam.find((d) => d.company_id === co.id && d.role === "lead")!.user_key;
     Object.assign(ctx.vars, {
       company: co.name, ceo: ceo.first_name, ceoFull: fullName(ceo), cto: cto.first_name,
-      industry: INDUSTRY_LABEL[cmeta.industryKey!].toLowerCase(), arr: money(m.arr), g: m.growthQoQ,
+      industry: lowerIndustry(INDUSTRY_LABEL[cmeta.industryKey!]), arr: money(m.arr), g: m.growthQoQ,
       runway: m.runway, runwayDate: `${monthName(runwayEnd)} ${runwayEnd.slice(0, 4)}`,
       nextRound: round, raiseAmount: money(rng.int(lo * 10, hi * 10) * 100_000),
       raiseQ: quarterLabel(addDays(plan.date, Math.max(60, (m.runway - 9) * 30)), 0),
-      competitor: rng.pick(ctx.profile!.competitors), lead: userToken(lead),
+      competitor: rng.pick(ctx.profile!.competitors), lead: userToken(leadUser(ctx)),
     });
 
     // Needs first, so their bullets land in the right sections.
@@ -270,8 +277,8 @@ function buildOne(
       const g: Section = { key: "golden", heading: spec.note.sectionHeading, bullets: spec.note.bullets.map((b) => ({ ...b })), pinned: spec.note.bullets.length };
       sections.splice(Math.min(1, sections.length), 0, g);
       ctx.asks.unshift(spec.note.ask);
-      ctx.steps.unshift({ owner: userToken(lead), action: spec.note.nextStep, by: shortDate(addDays(plan.date, rng.int(5, 12))) });
-      needsSummary.unshift(spec.note.sectionHeading);
+      ctx.steps.unshift({ owner: userToken(leadUser(ctx)), action: spec.note.nextStep, by: shortDate(addDays(plan.date, rng.int(5, 12))) });
+      needsSummary.unshift(GOLDEN_SUMMARY[spec.key]);
     }
 
     // Default follow-ups from the company side.
@@ -294,13 +301,15 @@ function buildOne(
     otherAsksAndSteps(ctx, plan);
   }
 
-  if (ctx.steps.length < 3) ctx.steps.push({ owner: userToken(plan.users[0].key), action: rng.pick(["log the follow-ups in the CRM", "add notes to the contact record", "schedule the next check-in"]), by: shortDate(addDays(plan.date, rng.int(3, 10))) });
+  // Every note ends with at least three concrete next steps.
+  const fillers = rng.shuffle(["log the follow-ups in the CRM", "schedule the next check-in", "share these notes with the deal team", "add notes to the contact record"]);
+  while (dedupeSteps(ctx.steps).length < 3) ctx.steps.push({ owner: userToken(plan.users[ctx.steps.length % plan.users.length].key), action: fillers.pop()!, by: shortDate(addDays(plan.date, rng.int(3, 10))) });
   const steps = dedupeSteps(ctx.steps).slice(0, rng.int(3, 5)).map((s) => ({ ...s, action: t(ctx, s.action) }));
   if (spec && !steps.some((s) => s.action === spec.note.nextStep)) steps.unshift(ctx.steps.find((s) => s.action === spec.note.nextStep)!);
 
   const context = contextLine(ctx, plan, sections);
   const { body } = compose({
-    attendees: attendeeLines(ctx), context, sections, reserve, asks: ctx.asks.slice(0, 4), steps, targetWords: rng.int(760, 1140),
+    attendees: attendeeLines(ctx), context, sections, reserve, asks: ctx.asks.slice(0, 5), steps, targetWords: rng.int(760, 1140),
   });
 
   return {
@@ -321,6 +330,8 @@ function dedupeSteps(steps: NextStep[]): NextStep[] {
   return steps.filter((s, i) => steps.findIndex((x) => x.action === s.action) === i);
 }
 
+let eventCounter = 0;
+
 function otherAsksAndSteps(ctx: NoteCtx, plan: PlannedNote) {
   const p = plan.people[0];
   const r = ctx.rng;
@@ -333,8 +344,8 @@ function otherAsksAndSteps(ctx: NoteCtx, plan: PlannedNote) {
       ctx.steps.push({ owner: p.first_name, action: "send an updated CV", by: shortDate(addDays(plan.date, r.int(3, 9))) });
       break;
     case "investor_meeting":
-      ctx.asks.push(`${plan.company!.name} asked to see more ${listify(ctx.world.companyMeta[plan.company!.id].focus.map((f) => INDUSTRY_LABEL[f].toLowerCase()))} deal flow from us.`);
-      ctx.asks.push("Opportunity: co-invest in a portfolio company's next round where the focus overlaps.");
+      ctx.asks.push(`${plan.company!.name} asked to see more ${listify(ctx.world.companyMeta[plan.company!.id].focus.map((f) => lowerIndustry(INDUSTRY_LABEL[f])))} deal flow from us.`);
+      ctx.asks.push(t(ctx, "[Opportunity: co-invest in a portfolio company's next round where the focus overlaps.|Opportunity: they could be a good follow-on investor for our Series A companies.|Opportunity: a joint founder event in {nextQ}.|Opportunity: swap notes on two companies we are both tracking.]"));
       ctx.steps.push({ owner: p.first_name, action: "share their current portfolio list", by: shortDate(addDays(plan.date, r.int(5, 12))) });
       break;
     case "expert_call":
@@ -348,7 +359,7 @@ function otherAsksAndSteps(ctx: NoteCtx, plan: PlannedNote) {
       ctx.steps.push({ owner: p.first_name, action: "share the pilot criteria document", by: shortDate(addDays(plan.date, r.int(5, 14))) });
       break;
     case "event_conversation": {
-      const [ev, city] = r.pick(EVENTS);
+      const [ev, city] = EVENTS[eventCounter++ % EVENTS.length];
       ctx.vars.event = ev; ctx.vars.city = city;
       ctx.asks.push(...plan.people.slice(0, 2).map((x) => `${x.first_name} would welcome intros to [founders|people] working on ${x.expertise_tags[0] ?? "similar problems"}.`.replace(/\[([^\]|]*\|[^\]]*)\]/g, (_, a: string) => r.pick(a.split("|")))));
       ctx.steps.push({ owner: host, action: "send follow-up emails to everyone we met", by: shortDate(addDays(plan.date, r.int(1, 4))) });
@@ -358,7 +369,7 @@ function otherAsksAndSteps(ctx: NoteCtx, plan: PlannedNote) {
 }
 
 function contextLine(ctx: NoteCtx, plan: PlannedNote, sections: Section[]): string {
-  const topics = listify(sections.slice(0, 3).map((s) => s.heading.toLowerCase()));
+  const topics = listify(sections.slice(0, 3).map((s) => softLower(s.heading)));
   const p = plan.people[0];
   const others = plan.people.slice(1).map(fullName);
   const t = (s: string) => s.replace(/\[([^\]|]*\|[^\]]*)\]/g, (_, a: string) => ctx.rng.pick(a.split("|")));
@@ -368,15 +379,15 @@ function contextLine(ctx: NoteCtx, plan: PlannedNote, sections: Section[]): stri
     case "founder_catchup":
       return t(`[Informal|1:1] catch-up with ${fullName(p)} [over coffee|over lunch near their office|on a video call|during a walk along the canal]. [Mostly about|${p.first_name} wanted to talk through] ${topics}.`);
     case "candidate_chat":
-      return t(`[Intro call|First conversation|Exploratory chat] with ${fullName(p)}, [referred by a portfolio founder|who reached out via LinkedIn|whom we met at a community event]. [Exploring|Open to] next steps and possible roles in the portfolio.`);
+      return t(`[Intro call|First conversation|Exploratory chat] with ${fullName(p)}, [referred by a portfolio founder|who reached out through our website|whom we met at a community event]. [Exploring|Open to] next steps and possible roles in the portfolio. [Goal was to understand what they want next and where they could fit.|We wanted to get a feel for their profile before sharing it with founders.]`);
     case "investor_meeting":
-      return t(`[Intro|Catch-up|Coffee] with ${listify(plan.people.map(fullName))} from ${plan.company!.name} to [compare notes on the market|share deal flow|explore co-investment opportunities].`);
+      return t(`[Intro|Catch-up|Coffee] with ${listify(plan.people.map(fullName))} from ${plan.company!.name} to [compare notes on the market|share deal flow|explore co-investment opportunities]. [Second conversation this year.|First proper meeting after a few emails.|Follow-up to a chance meeting at an event.]`);
     case "expert_call":
-      return t(`[Call|Intro call] with ${fullName(p)} to [understand where they could help portfolio companies|consider them for the expert bench|get their view on ${p.expertise_tags[0] ?? "their area"}].`);
+      return t(`[Call|Intro call] with ${fullName(p)} to [understand where they could help portfolio companies|consider them for the expert bench|get their view on ${p.expertise_tags[0] ?? "their area"}]. [Recommended by a portfolio founder.|Came up as a name in two separate conversations.|They reached out after a community event.]`);
     case "corporate_meeting":
-      return t(`[Meeting|Intro meeting|Follow-up meeting] with ${listify(plan.people.map(fullName))} from ${plan.company!.name} about [their startup programme|working with portfolio companies|their priorities for next year].`);
+      return t(`[Meeting|Intro meeting|Follow-up meeting] with ${listify(plan.people.map(fullName))} from ${plan.company!.name} about [their startup programme|working with portfolio companies|their priorities for next year]. [Set up after an intro from a portfolio founder.|Follow-up from an earlier call with their innovation team.|They asked for the meeting after seeing our portfolio update.]`);
     case "event_conversation":
-      return `Conversations at ${ctx.vars.event} in ${ctx.vars.city}. Brief notes on the people worth following up with.`;
+      return t(`Conversations at ${ctx.vars.event} in ${ctx.vars.city}. [Brief notes on the people worth following up with.|Short notes on who we met and what to follow up on.]`);
   }
 }
 
@@ -398,7 +409,7 @@ function titleFor(ctx: NoteCtx, plan: PlannedNote): string {
     case "corporate_meeting":
       return r.pick([`${co!.name}: partnerships meeting`, `Meeting with ${co!.name}`, `${co!.name} startup programme`]);
     case "event_conversation":
-      return `Notes from ${String(ctx.vars.event).replace(/^(the|an|a) /, "")}`;
+      return `Notes from ${ctx.vars.event}`;
   }
 }
 

@@ -124,7 +124,7 @@ function advisorNeed(ctx: NoteCtx, level: Explicitness): PlannedNeed | null {
       sectionKey,
       bullet: bullet(ctx, symptom, [`[{ceo} acknowledged it|{ceo} raised it] but has no [plan|owner] for it yet`]),
       ask: t(ctx, `[Implied|No explicit ask]: would benefit from ${who}.`),
-      summary: `${section} support`,
+      summary: `${section} expertise`,
     };
   }
   return {
@@ -170,13 +170,23 @@ function investorNeed(ctx: NoteCtx, level: Explicitness): PlannedNeed | null {
 }
 
 function futureTalentNeed(ctx: NoteCtx, level: Explicitness): PlannedNeed | null {
-  const roles = ["first Head of People", "Head of Finance", "country lead for Germany", "Head of Partnerships", "senior product designer", "Head of Customer Success"];
-  const role = ctx.rng.pick(roles);
+  const roles: [string, string][] = [
+    ["first Head of People", "people topics"], ["Head of Finance", "finance"], ["country lead for Germany", "the German market"],
+    ["Head of Partnerships", "partnerships"], ["senior product designer", "design"], ["Head of Customer Success", "customer success"],
+  ];
+  const [role, area] = ctx.rng.pick(roles.filter(([r]) => !(GOLDEN_TOPICS[ctx.company!.name] ?? []).some((x) => r.includes(x))));
   if (ctx.jobs.some((j) => role.toLowerCase().includes(j.title.toLowerCase()))) return null;
   return {
     sectionKey: "hiring",
-    bullet: level === "implied" ? bullet(ctx, `[Nobody owns|No one really owns] ${role.replace(/^(first |senior )/, "").toLowerCase()} topics yet; {ceo} is [patching it|handling it ad hoc]`, []) : null,
+    bullet: level === "implied" ? bullet(ctx, `[Nobody|No one] really owns ${area} yet; {ceo} is [patching it|handling it ad hoc|covering it on top of everything else]`, []) : null,
     ask: level === "implied" ? t(ctx, `[Implied|Not asked]: a ${role} will be needed within [two|three] quarters.`) : t(ctx, `Will need a ${role} [in {nextQ}|early next year]; early names welcome.`),
-    summary: `future ${role} hire`,
+    summary: `a future ${role}`,
   };
 }
+
+/** Topics that belong to a golden scenario: random needs for that company avoid them. */
+const GOLDEN_TOPICS: Record<string, string[]> = {
+  "Sanavo Care": ["Finance"],
+  Stackharbor: ["Engineering"],
+  Grachtpay: ["Germany", "Sales"],
+};

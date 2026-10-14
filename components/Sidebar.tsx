@@ -51,7 +51,7 @@ export function Sidebar({ name, email, isAdmin }: { name: string; email: string;
       <aside
         className={`${open ? "block" : "hidden"} fixed inset-x-0 top-[49px] bottom-0 z-20 overflow-y-auto bg-sidebar p-4 md:sticky md:top-0 md:block md:h-screen md:w-60 md:shrink-0 md:border-r md:border-line`}
       >
-        <Link href="/" className="mb-6 hidden md:block"><Logo className="text-lg" /></Link>
+        <Link href="/" className="mb-6 hidden md:block"><Logo className="text-[15px]" /></Link>
         <nav className="flex flex-col gap-1">{NAV.map((i) => link(i, active(i.href)))}</nav>
         {isAdmin && (
           <>

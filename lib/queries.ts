@@ -81,21 +81,14 @@ export async function listContacts(p: Params, all = false, myUserId?: string) {
   if (str(p, "tag")) q = q.contains("expertise_tags", [str(p, "tag")]);
   if (str(p, "company_id")) q = q.eq("current_company_id", str(p, "company_id"));
 
-  // "known" filter: me | anyone | nobody. Done in two steps because
-  // PostgREST can't express "has no related rows" directly.
   const known = str(p, "known");
-  if (known) {
-    let rel = supabase.from("user_contacts").select("contact_id").range(0, 9999);
-    if (known === "me" && myUserId) rel = rel.eq("user_id", myUserId);
-    const { data: relRows } = await rel;
-    const ids = [...new Set((relRows ?? []).map((r) => r.contact_id))];
-    if (known === "nobody") q = q.not("id", "in", `(${ids.join(",") || "00000000-0000-0000-0000-000000000000"})`);
-    else q = q.in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
-  }
-
-  const { data, count, error } = await paginate(q, all ? null : pageOf(p));
+  // "known" filter (me | anyone | nobody) needs the relationships, which
+  // PostgREST can't filter on as "has none". So with that filter we fetch
+  // every match (≈450 rows, cheap), filter here, then paginate ourselves.
+  const page = all ? null : pageOf(p);
+  const { data, count, error } = known ? await q.range(0, 9999) : await paginate(q, page);
   if (error) throw error;
-  const rows = (data ?? []).map((c) => {
+  let rows = (data ?? []).map((c) => {
     const rels = (c.user_contacts ?? []) as { strength: number; user_id: string }[];
     return {
       ...c,
@@ -105,7 +98,14 @@ export async function listContacts(p: Params, all = false, myUserId?: string) {
       user_contacts: undefined,
     };
   });
-  return { rows, total: count ?? 0 };
+  if (!known) return { rows, total: count ?? 0 };
+
+  rows = rows.filter((c) =>
+    known === "me" ? c.my_strength !== null : known === "nobody" ? c.known_by_count === 0 : c.known_by_count > 0,
+  );
+  const total = rows.length;
+  if (page !== null) rows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  return { rows, total };
 }
 
 // ---------------------------------------------------------------- users
@@ -134,7 +134,7 @@ export async function listNotes(p: Params, all = false) {
   const supabase = await createClient();
   let q = supabase
     .from("meeting_notes")
-    .select("id, met_on, title, meeting_type, summary, company_id, companies(name), created_by, users(full_name)", { count: "exact" })
+    .select("id, met_on, title, meeting_type, summary, company_id, companies(name), created_by, author:users!meeting_notes_created_by_fkey(full_name)", { count: "exact" })
     .order("met_on", { ascending: false });
   const search = str(p, "q");
   if (search) q = q.textSearch("search", search, { type: "websearch", config: "english" });
@@ -146,9 +146,9 @@ export async function listNotes(p: Params, all = false) {
   const rows = (data ?? []).map((n) => ({
     ...n,
     company_name: (n.companies as unknown as { name: string } | null)?.name ?? "",
-    created_by_name: (n.users as unknown as { full_name: string } | null)?.full_name ?? "",
+    created_by_name: (n.author as unknown as { full_name: string } | null)?.full_name ?? "",
     companies: undefined,
-    users: undefined,
+    author: undefined,
   }));
   return { rows, total: count ?? 0 };
 }

@@ -10,7 +10,10 @@ export async function addPersonEverywhere(input: { full_name: string; emails: st
   const emails = input.emails.map((e) => e.trim().toLowerCase());
 
   // Same person already in the local file (by key or email)? Reuse their key.
-  const existing = local.find((p) => p.key === input.key || emailsOf(p).some((e) => emails.includes(e)));
+  const sameName = local.filter((p) => p.full_name.trim().toLowerCase() === input.full_name.trim().toLowerCase());
+  const existing =
+    local.find((p) => p.key === input.key || emailsOf(p).some((e) => emails.includes(e))) ??
+    (!input.key && sameName.length === 1 ? sameName[0] : undefined);
   const key = input.key ?? existing?.key ?? (await nextParticipantKey(db, local.map((p) => p.key)));
 
   const result = await addParticipant(db, {
